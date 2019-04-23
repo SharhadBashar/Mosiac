@@ -46,46 +46,45 @@ app.post('/save', (req, res) => {
         filters: filters
     }
     pictures.push(pictureArr);
-    if (filters === 'grayscale') {
-        Filter.render(imagePath, Filter.preset.grayscale, function (result) {
-            result.data.pipe(fs.createWriteStream(savePath)); // save local
-        })
-    }
-    else if (filters === 'sepia') {
-        Filter.render(imagePath, Filter.preset.sepia, function (result) {
-            result.data.pipe(fs.createWriteStream(savePath)); // save local
-        })
-    }
-    else if (filters === 'blur') {
-        let options = {
-            value : 10
-        };
-        Filter.render(imagePath, Filter.preset.blur, options, function (result) {
-            result.data.pipe(fs.createWriteStream(savePath)); // save local
-        })
-    }
-    else if (filters === 'brightness') {
-        let options = {
-            value : 50
-        };
-        Filter.render(imagePath, Filter.preset.brightness, options, function (result) {
-            result.data.pipe(fs.createWriteStream(savePath)); // save local
-        })
-    }
-    else if (filters === 'invert') {
-        let options = {
-            value : 50
-        };
-        Filter.render(imagePath, Filter.preset.invert, options, function (result) {
-            result.data.pipe(fs.createWriteStream(savePath)); // save local
-        })
-    }
-    else {
+    var i = 0;
+    var done = true;
+    if (filters.length === 0) {
         fs.createReadStream(imagePath).pipe(fs.createWriteStream(savePath));
+        res.send(pictures);
+    }
+    while(done && i < filters.length) {
+        done = false;
+        done = applyFilter(filters[i], imagePath, savePath);
+        if (done) {
+            i++;
+        }
     }
     res.send(pictures);
 });
 
+async function applyFilter(filterType, imagePath, savePath,) {
+    var filePath = fs.existsSync(savePath) ? savePath : imagePath;
+    if (filterType === 'sepia') {
+        filter = Filter.preset.sepia;
+    }
+    else if (filterType === 'blur') {
+        filter = Filter.preset.blur
+    }
+    else if (filterType === 'grayscale') {
+        filter = Filter.preset.grayscale;
+    }
+    else if (filterType === 'brightness') {
+        filter = Filter.preset.brightness;
+    }
+    else if (filterType === 'invert') {
+        filter = Filter.preset.invert;
+    }
+    var done = await Filter.render(filePath, filter, async function (result) {
+        await result.data.pipe(fs.createWriteStream(savePath)); // save local
+        return true;
+    })
+    return done;
+}
 
 //deletes picture
 app.delete('/picture/:id', (req, res) => {
